@@ -157,7 +157,11 @@ public unsafe abstract class Buffer<T> : NativeObject
 
         try
         {
+#if NET6_0_OR_GREATER
             ref T r0 = ref MemoryMarshal.GetArrayDataReference(array);
+#else
+            ref T r0 = ref MemoryMarshal.GetReference<T>(array);
+#endif
 
             CopyTo(ref r0, sourceOffset, count);
 
