@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿#if !NET6_0_OR_GREATER
+
+using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices;
 using TerraFX.Interop.DirectX;
@@ -63,3 +65,5 @@ internal static class D3D12FeatureHelper
         }
     }
 }
+
+#endif
