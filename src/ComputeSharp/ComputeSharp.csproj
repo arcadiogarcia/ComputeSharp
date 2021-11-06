@@ -23,9 +23,14 @@
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="5.0.0" />
   </ItemGroup>
 
-    <!-- .NET Standard 2.0 uses a local fork of TerraFX.Interop.Windows and no D3D12MA -->
+  <!-- .NET Standard 2.0 uses a local fork of TerraFX.Interop.Windows and no D3D12MA -->
   <Import Condition="'$(TargetFramework)' == 'netstandard2.0'"
           Project="..\TerraFX.Interop.Windows\TerraFX.Interop.Windows.projitems"
+          Label="Shared" />
+
+  <!-- Shared project with .NET Standard 2.0 polyfills -->
+  <Import Condition="'$(TargetFramework)' == 'netstandard2.0'"
+          Project="..\ComputeSharp.Polyfills\ComputeSharp.Polyfills.projitems"
           Label="Shared" />
 
   <Choose>
