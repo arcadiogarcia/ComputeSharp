@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package >
+  <metadata>
+    <id>ComputeSharp.UWP</id>
+    <version>2.0.0</version>
+    <title>ComputeSharp.UWP</title>
+    <authors>Sergio Pedri</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <projectUrl>https://github.com/Sergio0694/ComputeSharp</projectUrl>
+    <iconUrl>https://user-images.githubusercontent.com/10199417/110238403-b8811080-7f41-11eb-8cfe-e47e7e58f05b.png</iconUrl>
+    <description>A UWP library with controls to render DX12 shaders powered by ComputeSharp</description>
+    <copyright>Copyright (c) 2021 Sergio Pedri</copyright>
+    <tags>dotnet net netcore netstandard winui uwp windows windowsapps csharp library graphics shader hlsl compute gpu performance parallel</tags>
+        <dependencies>
+      <group targetFramework="netstandard2.0" />
+    </dependencies>
+  </metadata>
+
+   <files>
+      <!-- AnyCPU dll -->
+      <file src="bin\Release\ComputeSharp.UWP.dll" target="lib\netstandard2.0"/>
+      <file src="bin\Release\ComputeSharp.UWP.pri" target="lib\netstandard2.0"/>
+      <!-- arm64 dll -->
+      <file src="bin\ARM64\Release\ComputeSharp.UWP.dll" target="runtimes\win10-arm64\lib\uap10.0"/>
+      <file src="bin\ARM64\Release\ComputeSharp.UWP.pri" target="runtimes\win10-arm64\lib\uap10.0"/>
+      <!-- x64 dll -->
+      <file src="bin\x64\Release\ComputeSharp.UWP.dll" target="runtimes\win10-x64\lib\uap10.0"/>
+      <file src="bin\x64\Release\ComputeSharp.UWP.pri" target="runtimes\win10-x64\lib\uap10.0"/>
+    </files>
+</package>
