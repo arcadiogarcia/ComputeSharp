@@ -40,7 +40,7 @@ public sealed unsafe partial class ComputeShaderPanel : SwapChainPanel
         this.isDynamicResolutionEnabled = true;
 
         OnInitialize();
-        OnStartRenderLoop();
+        //OnStartRenderLoop();
     }
 
     // Requests a cancellation for the render thread

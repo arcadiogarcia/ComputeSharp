@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -9,6 +9,7 @@ using TerraFX.Interop.DirectX;
 using TerraFX.Interop.Windows;
 using TerraFX.Interop.WinRT;
 using Win32 = TerraFX.Interop.Windows.Windows;
+using System.Threading.Tasks;
 
 #nullable enable
 
@@ -135,6 +136,11 @@ public sealed partial class ComputeShaderPanel
     private volatile bool isCancellationRequested;
 
     /// <summary>
+    /// The number of frames left before we pause the render loop, -1 means we never stop
+    /// </summary>
+    private volatile int framesRemaining = 0;
+
+    /// <summary>
     /// The <see cref="Stopwatch"/> instance tracking time since the first rendered frame.
     /// </summary>
     private Stopwatch? renderStopwatch;
@@ -143,6 +149,12 @@ public sealed partial class ComputeShaderPanel
     /// Indicates whether or not <see cref="OnInitialize"/> has already been called.
     /// </summary>
     private bool isInitialized;
+
+    /// <summary>
+    /// Keeps track of all the pending tasks that will be completed when a frame renders
+    /// Keys are the pending completion sources, their values are the number of frames that must be rendered before the task completes
+    /// </summary>
+    private ConcurrentDictionary<TaskCompletionSource<ComputeShaderPanel>, int> renderCompletionTasks = new ConcurrentDictionary<TaskCompletionSource<ComputeShaderPanel>, int>();
 
     /// <summary>
     /// Initializes the current application.
@@ -427,6 +439,53 @@ public sealed partial class ComputeShaderPanel
         this.nextD3D12FenceValue++;
     }
 
+    private void UpdateRenderCompletionTasks()
+    {
+        foreach (var (tsc, framesLeft) in renderCompletionTasks.ToArray())
+        {
+            if (framesLeft == 1)
+            {
+                renderCompletionTasks.TryRemove(tsc, out _);
+                tsc.SetResult(this);
+            }
+            else
+            {
+                renderCompletionTasks.TryUpdate(tsc, framesLeft, framesLeft - 1);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Asks the panel to draw a single frame
+    /// </summary>
+    public Task<ComputeShaderPanel> RequestFrame() => RequestFrames(1);
+
+    /// <summary>
+    /// Asks the panel to draw N frames
+    /// </summary>
+    public Task<ComputeShaderPanel> RequestFrames(int numberFramesRequested)
+    {
+        var taskCompletionSource = new TaskCompletionSource<ComputeShaderPanel>();
+
+        renderCompletionTasks.TryAdd(taskCompletionSource, numberFramesRequested);
+
+        System.Diagnostics.Debug.WriteLine($"Requested {numberFramesRequested} frames");
+
+        if (this.framesRemaining != -1 && numberFramesRequested > this.framesRemaining)
+        {
+            this.framesRemaining = numberFramesRequested;
+        }
+
+        if (this.renderThread is null)
+        {
+            System.Diagnostics.Debug.WriteLine($"Start rendering loop");
+            OnStartRenderLoop();
+        }
+
+        taskCompletionSource.SetResult(this);
+        return taskCompletionSource.Task;
+    }
+
     /// <summary>
     /// Executes the render loop for the current panel.
     /// </summary>
@@ -448,6 +507,8 @@ public sealed partial class ComputeShaderPanel
             @this.OnUpdate(renderStopwatch.Elapsed);
             @this.OnPresent();
 
+            @this.UpdateRenderCompletionTasks();
+
             renderStopwatch.Start();
 
             const long targetFrameTimeInTicksFor61fps = 163934;
@@ -455,6 +516,15 @@ public sealed partial class ComputeShaderPanel
             // Main render loop, until cancellation is requested
             while (!@this.isCancellationRequested)
             {
+                if (@this.framesRemaining != -1)
+                {
+                    @this.framesRemaining--;
+                    if (@this.framesRemaining == 0)
+                    {
+                        break;
+                    }
+                }
+
                 // Update the resolution mode, if needed
                 if (isDynamicResolutionEnabled != @this.isDynamicResolutionEnabled)
                 {
@@ -485,9 +555,13 @@ public sealed partial class ComputeShaderPanel
 
                 @this.OnUpdate(renderStopwatch.Elapsed);
                 @this.OnPresent();
+
+                  @this.UpdateRenderCompletionTasks();
             }
 
             renderStopwatch.Stop();
+            @this.renderThread = null;
+            System.Diagnostics.Debug.WriteLine($"Stop render loop");
         }
 
         this.isCancellationRequested = false;

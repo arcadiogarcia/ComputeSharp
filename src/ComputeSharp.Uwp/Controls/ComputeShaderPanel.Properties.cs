@@ -88,38 +88,4 @@ public sealed unsafe partial class ComputeShaderPanel
 
         @this.isDynamicResolutionEnabled = isDynamicResolutionEnabled;
     }
-
-    /// <summary>
-    /// Gets or sets whether or not the rendering is paused.
-    /// </summary>
-    public bool IsPaused
-    {
-        get => (bool)GetValue(IsPausedProperty);
-        set => SetValue(IsPausedProperty, value);
-    }
-
-    /// <summary>
-    /// The <see cref="DependencyProperty"/> backing <see cref="IsPaused"/>.
-    /// </summary>
-    public static readonly DependencyProperty IsPausedProperty = DependencyProperty.Register(
-        nameof(IsPaused),
-        typeof(bool),
-        typeof(ComputeShaderPanel),
-        new PropertyMetadata(false, OnIsPausedPropertyChanged));
-
-    /// <inheritdoc cref="DependencyPropertyChangedCallback"/>
-    private static void OnIsPausedPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        var @this = (ComputeShaderPanel)d;
-        var isPaused = (bool)e.NewValue;
-
-        if (isPaused)
-        {
-            @this.OnStopRenderLoop();
-        }
-        else
-        {
-            @this.OnStartRenderLoop();
-        }
-    }
 }

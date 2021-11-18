@@ -7,7 +7,7 @@ namespace System.Numerics;
 /// <summary>
 /// A <see langword="class"/> that contains extension methods for the <see cref="Vector2"/>, <see cref="Vector3"/> and <see cref="Vector4"/> types.
 /// </summary>
-public static class VectorExtensions
+public static class ComputeSharpVectorExtensions
 {
     /// <summary>
     /// Converts a <see cref="Vector2"/> array into a <see cref="Span{T}"/> with items of type <see cref="Float2"/>.
