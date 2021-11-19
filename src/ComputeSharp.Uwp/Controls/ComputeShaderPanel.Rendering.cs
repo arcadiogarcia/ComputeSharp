@@ -10,6 +10,7 @@ using TerraFX.Interop.Windows;
 using TerraFX.Interop.WinRT;
 using Win32 = TerraFX.Interop.Windows.Windows;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 
 #nullable enable
 
@@ -136,9 +137,9 @@ public sealed partial class ComputeShaderPanel
     private volatile bool isCancellationRequested;
 
     /// <summary>
-    /// The number of frames left before we pause the render loop, -1 means we never stop
+    /// A queue containing the parameters object that should be passed to the runner to render each pending frame
     /// </summary>
-    private volatile int framesRemaining = 0;
+    private ConcurrentQueue<object> pendingFrameParameters = new ConcurrentQueue<object>();
 
     /// <summary>
     /// The <see cref="Stopwatch"/> instance tracking time since the first rendered frame.
@@ -202,7 +203,7 @@ public sealed partial class ComputeShaderPanel
         // Create the swap chain to display frames
         using (ComPtr<IDXGIFactory2> dxgiFactory2 = default)
         {
-            DirectX.CreateDXGIFactory2(DXGI.DXGI_CREATE_FACTORY_DEBUG, Win32.__uuidof<IDXGIFactory2>(), (void**)dxgiFactory2.GetAddressOf()).Assert();
+            DirectX.CreateDXGIFactory2(0, Win32.__uuidof<IDXGIFactory2>(), (void**)dxgiFactory2.GetAddressOf()).Assert();
 
             DXGI_SWAP_CHAIN_DESC1 dxgiSwapChainDesc1 = default;
             dxgiSwapChainDesc1.AlphaMode = DXGI_ALPHA_MODE.DXGI_ALPHA_MODE_IGNORE;
@@ -361,8 +362,14 @@ public sealed partial class ComputeShaderPanel
             return;
         }
 
+        //Skip if no parameters object left in the queue
+        if (!pendingFrameParameters.TryDequeue(out var parameters))
+        {
+            return;
+        }
+
         // Generate the new frame
-        this.shaderRunner.Execute(this.texture!, time);
+        this.shaderRunner.Execute(this.texture!, time, parameters);
     }
 
     /// <summary>
@@ -450,7 +457,7 @@ public sealed partial class ComputeShaderPanel
             }
             else
             {
-                renderCompletionTasks.TryUpdate(tsc, framesLeft, framesLeft - 1);
+                renderCompletionTasks.TryUpdate(tsc, framesLeft - 1, framesLeft);
             }
         }
     }
@@ -458,23 +465,24 @@ public sealed partial class ComputeShaderPanel
     /// <summary>
     /// Asks the panel to draw a single frame
     /// </summary>
-    public Task<ComputeShaderPanel> RequestFrame() => RequestFrames(1);
+    public Task<ComputeShaderPanel> RequestFrame(object parameter) => RequestFrames(new object[] {parameter});
 
     /// <summary>
     /// Asks the panel to draw N frames
     /// </summary>
-    public Task<ComputeShaderPanel> RequestFrames(int numberFramesRequested)
+    public Task<ComputeShaderPanel> RequestFrames(object[] frameParameters)
     {
         var taskCompletionSource = new TaskCompletionSource<ComputeShaderPanel>();
 
-        renderCompletionTasks.TryAdd(taskCompletionSource, numberFramesRequested);
 
-        System.Diagnostics.Debug.WriteLine($"Requested {numberFramesRequested} frames");
+        System.Diagnostics.Debug.WriteLine($"Requested {frameParameters.Length} frames");
 
-        if (this.framesRemaining != -1 && numberFramesRequested > this.framesRemaining)
+        foreach (var frameParameter in frameParameters)
         {
-            this.framesRemaining = numberFramesRequested;
+            pendingFrameParameters.Enqueue(frameParameter);
         }
+
+        renderCompletionTasks.TryAdd(taskCompletionSource, pendingFrameParameters.Count);
 
         if (this.renderThread is null)
         {
@@ -482,7 +490,6 @@ public sealed partial class ComputeShaderPanel
             OnStartRenderLoop();
         }
 
-        taskCompletionSource.SetResult(this);
         return taskCompletionSource.Task;
     }
 
@@ -516,14 +523,11 @@ public sealed partial class ComputeShaderPanel
             // Main render loop, until cancellation is requested
             while (!@this.isCancellationRequested)
             {
-                if (@this.framesRemaining != -1)
+                if (@this.pendingFrameParameters.IsEmpty)
                 {
-                    @this.framesRemaining--;
-                    if (@this.framesRemaining == 0)
-                    {
-                        break;
-                    }
+                    break;
                 }
+                System.Diagnostics.Debug.WriteLine($"{@this.pendingFrameParameters.Count} frames left");
 
                 // Update the resolution mode, if needed
                 if (isDynamicResolutionEnabled != @this.isDynamicResolutionEnabled)
@@ -556,7 +560,7 @@ public sealed partial class ComputeShaderPanel
                 @this.OnUpdate(renderStopwatch.Elapsed);
                 @this.OnPresent();
 
-                  @this.UpdateRenderCompletionTasks();
+                @this.UpdateRenderCompletionTasks();
             }
 
             renderStopwatch.Stop();
