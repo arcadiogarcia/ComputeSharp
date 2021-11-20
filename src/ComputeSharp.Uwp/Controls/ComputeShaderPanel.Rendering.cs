@@ -67,7 +67,7 @@ public sealed partial class ComputeShaderPanel
     private ComPtr<IDXGISwapChain2> dxgiSwapChain2;
 
     /// <summary>
-    /// The awaitable object for <see cref="IDXGISwapChain1.Present"/> calls.
+    /// The awaitable object for <see cref="IDXGISwapChain2.Present"/> calls.
     /// </summary>
     private HANDLE frameLatencyWaitableObject;
 
@@ -97,22 +97,22 @@ public sealed partial class ComputeShaderPanel
     private volatile bool isResizePending;
 
     /// <summary>
-    /// The backing store for <see cref="ActualWidth"/> for the render thread.
+    /// The backing store for <see /> for the render thread.
     /// </summary>
     private volatile float width;
 
     /// <summary>
-    /// The backing store for <see cref="ActualHeight"/> for the render thread.
+    /// The backing store for <see /> for the render thread.
     /// </summary>
     private volatile float height;
 
     /// <summary>
-    /// The backing store for <see cref="CompositionScaleX"/> for the render thread.
+    /// The backing store for <see /> for the render thread.
     /// </summary>
     private volatile float compositionScaleX;
 
     /// <summary>
-    /// The backing store for <see cref="CompositionScaleY"/> for the render thread.
+    /// The backing store for <see/> for the render thread.
     /// </summary>
     private volatile float compositionScaleY;
 
