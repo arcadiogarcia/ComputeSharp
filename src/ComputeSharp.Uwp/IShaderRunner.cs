@@ -12,5 +12,6 @@ public interface IShaderRunner
     /// </summary>
     /// <param name="texture">The target texture to render the frame to.</param>
     /// <param name="timespan">The timespan for the current frame.</param>
+    /// <param name="parameters">The timespan for the current frame.</param>
     public void Execute(IReadWriteTexture2D<Float4> texture, TimeSpan timespan, object parameters);
 }

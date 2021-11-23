@@ -129,7 +129,7 @@ public sealed partial class ComputeShaderPanel
     /// <summary>
     /// Whether dynamic resolution is currently enabled.
     /// </summary>
-    private volatile bool isDynamicResolutionEnabled;
+    private volatile bool isDynamicResolutionEnabled = true;
 
     /// <summary>
     /// Indicates whether or not the rendering has been canceled.
@@ -283,6 +283,7 @@ public sealed partial class ComputeShaderPanel
     /// </summary>
     private void OnResize()
     {
+        System.Diagnostics.Trace.WriteLine("OnResize");
         this.isResizePending = true;
     }
 
@@ -291,6 +292,8 @@ public sealed partial class ComputeShaderPanel
     /// </summary>
     private unsafe void ApplyResize()
     {
+        System.Diagnostics.Trace.WriteLine("ApplyResize");
+
         this.d3D12CommandQueue.Get()->Signal(this.d3D12Fence.Get(), this.nextD3D12FenceValue).Assert();
 
         // Wait for the fence again to ensure there are no pending operations
@@ -536,10 +539,12 @@ public sealed partial class ComputeShaderPanel
 
                     if (isDynamicResolutionEnabled)
                     {
+                        System.Diagnostics.Trace.WriteLine($"Enable dynamic resolution");
                         DynamicResolutionManager.Create(out frameTimeWatcher);
                     }
                     else
                     {
+                        System.Diagnostics.Trace.WriteLine($"Disable dynamic resolution");
                         @this.targetResolutionScale = @this.resolutionScale;
                     }
                 }
@@ -548,6 +553,7 @@ public sealed partial class ComputeShaderPanel
                 if (isDynamicResolutionEnabled &&
                     frameTimeWatcher.Advance(frameStopwatch.ElapsedTicks, ref @this.targetResolutionScale))
                 {
+                    System.Diagnostics.Trace.WriteLine($"Dynamic resolution resize (isDynamicResolutionEnabled={isDynamicResolutionEnabled}, @this.isDynamicResolutionEnabled = {@this.isDynamicResolutionEnabled}) ");
                     @this.isResizePending = true;
                 }
 

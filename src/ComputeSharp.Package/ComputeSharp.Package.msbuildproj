@@ -8,7 +8,7 @@
     <PackageId>ComputeSharp</PackageId>
     <Title>ComputeSharp</Title>
     <Description>A library to run C# code in parallel on the GPU through DX12 and dynamically generated HLSL compute shaders</Description>
-    <PackageVersion>2.0.0</PackageVersion>
+    <PackageVersion>2.0.0-local</PackageVersion>
     <RepositoryUrl>https://github.com/Sergio0694/ComputeSharp/</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>

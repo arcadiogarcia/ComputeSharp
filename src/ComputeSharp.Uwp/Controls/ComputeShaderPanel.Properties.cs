@@ -86,6 +86,7 @@ public sealed unsafe partial class ComputeShaderPanel
         var @this = (ComputeShaderPanel)d;
         var isDynamicResolutionEnabled = (bool)e.NewValue;
 
+        System.Diagnostics.Trace.WriteLine($"Set dynamic resolution isDynamicResolutionEnabled = {isDynamicResolutionEnabled}) ");
         @this.isDynamicResolutionEnabled = isDynamicResolutionEnabled;
     }
 }

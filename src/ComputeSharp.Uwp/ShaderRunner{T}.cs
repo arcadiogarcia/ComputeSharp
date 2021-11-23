@@ -6,6 +6,7 @@ namespace ComputeSharp.Uwp;
 /// An <see cref="IShaderRunner"/> implementation powered by a supplied shader type.
 /// </summary>
 /// <typeparam name="T">The type of shader to use to render frames.</typeparam>
+/// <typeparam name="TParameters">The type of shader to use to render frames.</typeparam>
 public sealed class ShaderRunner<T, TParameters> : IShaderRunner
     where T : struct, IPixelShader<Float4>
     where TParameters : struct
@@ -16,7 +17,7 @@ public sealed class ShaderRunner<T, TParameters> : IShaderRunner
     private readonly Func<TimeSpan, TParameters, T> shaderFactory;
 
     /// <summary>
-    /// Creates a new <see cref="ShaderRunner{T}"/> instance that will create shader instances with
+    /// Creates a new <see /> instance that will create shader instances with
     /// the default constructor. Only use this constructor if the shader doesn't require any additional
     /// resources or other parameters being initialized before being dispatched on the GPU.
     /// </summary>
@@ -26,7 +27,7 @@ public sealed class ShaderRunner<T, TParameters> : IShaderRunner
     }
 
     /// <summary>
-    /// Creates a new <see cref="ShaderRunner{T}"/> instance.
+    /// Creates a new <see /> instance.
     /// </summary>
     /// <param name="shaderFactory">The <see cref="Func{T1, T2, TResult}"/> instance used to create shaders to run.</param>
     public ShaderRunner(Func<TimeSpan, TParameters, T> shaderFactory)

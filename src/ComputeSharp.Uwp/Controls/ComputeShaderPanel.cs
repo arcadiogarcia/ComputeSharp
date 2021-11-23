@@ -37,7 +37,9 @@ public sealed unsafe partial class ComputeShaderPanel : SwapChainPanel
         this.compositionScaleY = CompositionScaleY;
         this.resolutionScale = (float)ResolutionScale;
         this.targetResolutionScale = 1.0f;
-        this.isDynamicResolutionEnabled = true;
+        //Remove this since it happens after owner of the control sets a value, instead set true default in property declaration
+        //System.Diagnostics.Trace.WriteLine($"Enable dynamic resolution  prev value:isDynamicResolutionEnabled = {isDynamicResolutionEnabled}) ");
+        //this.isDynamicResolutionEnabled = true;
 
         OnInitialize();
         //OnStartRenderLoop();
@@ -52,6 +54,12 @@ public sealed unsafe partial class ComputeShaderPanel : SwapChainPanel
     // Updates the background store for the frame size factors used by the render thread
     private void ComputeShaderPanel_SizeChanged(object sender, SizeChangedEventArgs e)
     {
+        System.Diagnostics.Trace.WriteLine($"Panel size changed: {e.PreviousSize} to {e.NewSize}");
+        if (e.PreviousSize == e.NewSize)
+        {
+            return;
+        }
+
         this.width = (float)e.NewSize.Width;
         this.height = (float)e.NewSize.Height;
 
@@ -61,6 +69,13 @@ public sealed unsafe partial class ComputeShaderPanel : SwapChainPanel
     // Updates the background store for the composition scale factors used by the render thread
     private void ComputeShaderPanel_CompositionScaleChanged(SwapChainPanel sender, object args)
     {
+        System.Diagnostics.Trace.WriteLine($"Composition scale changed: {compositionScaleX} , {compositionScaleY} -> {CompositionScaleX}, {CompositionScaleY}");
+        if (this.compositionScaleX == CompositionScaleX &&
+            this.compositionScaleY == CompositionScaleY)
+        {
+            return;
+        }
+
         this.compositionScaleX = CompositionScaleX;
         this.compositionScaleY = CompositionScaleY;
 
