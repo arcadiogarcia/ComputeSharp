@@ -5,12 +5,17 @@ using System.Threading;
 using ComputeSharp.Core.Extensions;
 using ComputeSharp.Interop;
 using ComputeSharp.Uwp.Helpers;
+using static ComputeSharp.Texture2DExtensions;
 using TerraFX.Interop.DirectX;
 using TerraFX.Interop.Windows;
 using TerraFX.Interop.WinRT;
 using Win32 = TerraFX.Interop.Windows.Windows;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
+using Windows.Storage.Streams;
+using Windows.Foundation;
+using Windows.Graphics.Imaging;
+using System.Collections.Generic;
 
 #nullable enable
 
@@ -140,6 +145,8 @@ public sealed partial class ComputeShaderPanel
     /// A queue containing the parameters object that should be passed to the runner to render each pending frame
     /// </summary>
     private ConcurrentQueue<object> pendingFrameParameters = new ConcurrentQueue<object>();
+    private ConcurrentQueue<Action?> pendingPreRenderAction = new ConcurrentQueue<Action?>();
+    private ConcurrentQueue<Action?> pendingPostRenderAction = new ConcurrentQueue<Action?>();
 
     /// <summary>
     /// The <see cref="Stopwatch"/> instance tracking time since the first rendered frame.
@@ -371,6 +378,11 @@ public sealed partial class ComputeShaderPanel
             return;
         }
 
+        if (pendingPreRenderAction.TryDequeue(out var action) && action is not null)
+        {
+            action.Invoke();
+        }
+
         // Generate the new frame
         this.shaderRunner.Execute(this.texture!, time, parameters);
     }
@@ -451,6 +463,11 @@ public sealed partial class ComputeShaderPanel
 
     private void UpdateRenderCompletionTasks()
     {
+        if (pendingPostRenderAction.TryDequeue(out var action) && action is not null)
+        {
+            action.Invoke();
+        }
+
         foreach (var (tsc, framesLeft) in renderCompletionTasks.ToArray())
         {
             if (framesLeft == 1)
@@ -468,28 +485,27 @@ public sealed partial class ComputeShaderPanel
     /// <summary>
     /// Asks the panel to draw a single frame
     /// </summary>
-    public Task<ComputeShaderPanel> RequestFrame(object parameter) => RequestFrames(new object[] {parameter});
+    public Task<ComputeShaderPanel> RequestFrame(object parameter, Action? preRenderAction = null, Action? postRenderAction = null) => 
+        RequestFrames(new object[] { parameter }, preRenderAction, postRenderAction);
 
     /// <summary>
     /// Asks the panel to draw N frames
     /// </summary>
-    public Task<ComputeShaderPanel> RequestFrames(object[] frameParameters)
+    public Task<ComputeShaderPanel> RequestFrames(object[] frameParameters, Action? preRenderAction = null, Action? postRenderAction = null)
     {
         var taskCompletionSource = new TaskCompletionSource<ComputeShaderPanel>();
-
-
-        System.Diagnostics.Debug.WriteLine($"Requested {frameParameters.Length} frames");
 
         foreach (var frameParameter in frameParameters)
         {
             pendingFrameParameters.Enqueue(frameParameter);
+            pendingPreRenderAction.Enqueue(preRenderAction);
+            pendingPostRenderAction.Enqueue(postRenderAction);
         }
 
         renderCompletionTasks.TryAdd(taskCompletionSource, pendingFrameParameters.Count);
 
         if (this.renderThread is null)
         {
-            System.Diagnostics.Debug.WriteLine($"Start rendering loop");
             OnStartRenderLoop();
         }
 
@@ -609,5 +625,54 @@ public sealed partial class ComputeShaderPanel
         this.d3D12Resource0.Dispose();
         this.d3D12Resource1.Dispose();
         this.texture?.Dispose();
+    }
+
+    /// <summary>
+    /// Encodes the current texture as png
+    /// </summary>
+    public Task<bool> SaveAsync(IRandomAccessStream stream) => SaveAsync(stream, BitmapEncoder.JpegEncoderId);
+
+    /// <summary>
+    /// Encodes the current texture using the specified format
+    /// </summary>
+    public async Task<bool> SaveAsync(IRandomAccessStream stream, Guid encoderFormat)
+    {
+        if (this.texture is null)
+        {
+            return false;
+        }
+
+        var pixelData = new Rgba32[this.texture.Width * this.texture.Height];
+        this.texture.CopyTo(pixelData);
+
+        var rawPixelData = new byte[pixelData.Length * 4];
+        for (var i = 0; i < pixelData.Length; i++)
+        {
+            rawPixelData[i * 4] = pixelData[i].B;
+            rawPixelData[i * 4 + 1] = pixelData[i].G;
+            rawPixelData[i * 4 + 2] = pixelData[i].R;
+            rawPixelData[i * 4 + 3] = pixelData[i].A;
+        }
+
+        try
+        {
+            BitmapEncoder encoder = await BitmapEncoder.CreateAsync(encoderFormat, stream);
+            encoder.SetPixelData(
+                BitmapPixelFormat.Bgra8,
+                BitmapAlphaMode.Ignore,
+                (uint)this.texture.Width,
+                (uint)this.texture.Height,
+                dpiX: 96,
+                dpiY: 96,
+                pixels: rawPixelData);
+
+            await encoder.FlushAsync();
+        }
+        catch (Exception e)
+        {
+            return e.Message == "";
+        }
+
+        return true;
     }
 }
