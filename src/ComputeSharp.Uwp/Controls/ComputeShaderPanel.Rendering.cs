@@ -485,7 +485,7 @@ public sealed partial class ComputeShaderPanel
     /// <summary>
     /// Asks the panel to draw a single frame
     /// </summary>
-    public Task<ComputeShaderPanel> RequestFrame(object parameter, Action? preRenderAction = null, Action? postRenderAction = null) => 
+    public Task<ComputeShaderPanel> RequestFrame(object parameter, Action? preRenderAction = null, Action? postRenderAction = null) =>
         RequestFrames(new object[] { parameter }, preRenderAction, postRenderAction);
 
     /// <summary>
@@ -675,4 +675,14 @@ public sealed partial class ComputeShaderPanel
 
         return true;
     }
+
+    /// <summary>
+    /// Encodes the current texture using the specified format
+    /// </summary>
+    public object? TryGetNextFrameParameters() => pendingFrameParameters.TryPeek(out var parameters) ? parameters : null;
+
+    /// <summary>
+    /// The number of scheduled frames left
+    /// </summary>
+    public int PendingFramesCount => pendingFrameParameters.Count;
 }
