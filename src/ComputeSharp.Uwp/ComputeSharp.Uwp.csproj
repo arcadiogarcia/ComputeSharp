@@ -22,7 +22,7 @@
     <PackageId>ComputeSharp.Uwp</PackageId>
     <Title>ComputeSharp.Uwp</Title>
     <Description>A UWP library with controls to render DX12 shaders powered by ComputeSharp</Description>
-    <PackageVersion>2.0.19-localfork</PackageVersion>
+    <PackageVersion>2.0.20-localfork</PackageVersion>
     <RepositoryUrl>https://github.com/Sergio0694/ComputeSharp.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <ProjectUrl>https://github.com/Sergio0694/ComputeSharp</ProjectUrl>
