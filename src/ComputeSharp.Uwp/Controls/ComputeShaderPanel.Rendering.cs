@@ -141,12 +141,7 @@ public sealed partial class ComputeShaderPanel
     /// </summary>
     private volatile bool isCancellationRequested;
 
-    /// <summary>
-    /// A queue containing the parameters object that should be passed to the runner to render each pending frame
-    /// </summary>
-    private ConcurrentQueue<object> pendingFrameParameters = new ConcurrentQueue<object>();
-    private ConcurrentQueue<Action?> pendingPreRenderAction = new ConcurrentQueue<Action?>();
-    private ConcurrentQueue<Action?> pendingPostRenderAction = new ConcurrentQueue<Action?>();
+
 
     /// <summary>
     /// The <see cref="Stopwatch"/> instance tracking time since the first rendered frame.
@@ -162,7 +157,110 @@ public sealed partial class ComputeShaderPanel
     /// Keeps track of all the pending tasks that will be completed when a frame renders
     /// Keys are the pending completion sources, their values are the number of frames that must be rendered before the task completes
     /// </summary>
-    private ConcurrentDictionary<TaskCompletionSource<ComputeShaderPanel>, int> renderCompletionTasks = new ConcurrentDictionary<TaskCompletionSource<ComputeShaderPanel>, int>();
+
+    private IFrameRequestsQueue _framesQueue = new InfiniteFrameRequestsQueue();
+    /// <summary>
+    /// The queue that manages the pending frame requests for this panel
+    /// </summary>
+    public IFrameRequestsQueue FramesQueue
+    {
+        get => _framesQueue;
+        set
+        {
+            if (_framesQueue is not null)
+            {
+                _framesQueue.FrameRequested -= OnFrameRequested;
+            }
+
+            _framesQueue = value;
+            _framesQueue.FrameRequested += OnFrameRequested;
+        }
+    }
+
+    /// <summary>
+    /// A queue that holds all the pending frame requests to be rendered
+    /// </summary>
+    public interface IFrameRequestsQueue
+    {
+        /// <summary>
+        /// Whether there are no more frame requests left in the queue
+        /// </summary>
+        bool IsEmpty { get; }
+
+        /// <summary>
+        /// Pops the next frame to be rendered from the queue
+        /// </summary>
+        public bool TryDequeue(out object? frameProperties);
+        /// <summary>
+        /// Called just before starting to render a frame
+        /// </summary>
+        public void OnFrameStarted(object? frameParameters);
+        /// <summary>
+        /// Called just after the frame is presented
+        /// </summary>
+        public void OnFrameEnded(object? frameParameters);
+        /// <summary>
+        /// Invoked whenever a frame render request is received
+        /// </summary>
+        public event EventHandler? FrameRequested;
+    }
+
+    private class FrameRequestsQueue : IFrameRequestsQueue
+    {
+        private volatile int PendingFrames = 0;
+
+        public event EventHandler? FrameRequested;
+
+        public bool IsEmpty => PendingFrames > 0;
+
+        public void RequestFrame()
+        {
+            PendingFrames++;
+            FrameRequested?.Invoke(this, null);
+        }
+
+        public bool TryDequeue(out object? frameProperties)
+        {
+            frameProperties = null;
+            if (PendingFrames <= 0)
+            {
+                return false;
+            }
+            PendingFrames--;
+            return true;
+        }
+
+        public void OnFrameStarted(object? frameParameters) { }
+        public void OnFrameEnded(object? frameParameters) { }
+    }
+
+    private class InfiniteFrameRequestsQueue : IFrameRequestsQueue
+    {
+        private volatile bool _isRunning = false;
+        public event EventHandler? FrameRequested;
+
+        public void Start()
+        {
+            _isRunning = true;
+            FrameRequested?.Invoke(this, null);
+        }
+
+        public void Stop()
+        {
+            _isRunning = false;
+        }
+
+        public bool IsEmpty => !_isRunning;
+
+        public bool TryDequeue(out object? frameProperties)
+        {
+            frameProperties = null;
+            return _isRunning;
+        }
+
+        public void OnFrameStarted(object? frameParameters) { }
+        public void OnFrameEnded(object? frameParameters) { }
+    }
 
     /// <summary>
     /// Initializes the current application.
@@ -357,8 +455,11 @@ public sealed partial class ComputeShaderPanel
     /// Updates the render resolution, if needed, and renders a new frame.
     /// </summary>
     /// <param name="time">The current time since the start of the application.</param>
-    private unsafe void OnUpdate(TimeSpan time)
+    /// <param name="frameParameters">The parameters used to render the frame.</param>
+    private unsafe bool OnUpdate(TimeSpan time, out object? frameParameters)
     {
+        frameParameters = null;
+
         if (this.isResizePending)
         {
             ApplyResize();
@@ -369,28 +470,27 @@ public sealed partial class ComputeShaderPanel
         // Skip if no factory is available
         if (this.shaderRunner is null)
         {
-            return;
+            return false;
         }
 
         //Skip if no parameters object left in the queue
-        if (!pendingFrameParameters.TryDequeue(out var parameters))
+        if (!_framesQueue.TryDequeue(out frameParameters))
         {
-            return;
+            return false;
         }
 
-        if (pendingPreRenderAction.TryDequeue(out var action) && action is not null)
-        {
-            action.Invoke();
-        }
+        _framesQueue.OnFrameStarted(frameParameters);
 
         // Generate the new frame
-        this.shaderRunner.Execute(this.texture!, time, parameters);
+        this.shaderRunner.Execute(this.texture!, time, frameParameters);
+
+        return true;
     }
 
     /// <summary>
     /// Presents the last rendered frame for the current application.
     /// </summary>
-    private unsafe void OnPresent()
+    private unsafe void OnPresent(object? frameParameters)
     {
         _ = Win32.WaitForSingleObjectEx(frameLatencyWaitableObject, 1000, 1);
 
@@ -459,57 +559,17 @@ public sealed partial class ComputeShaderPanel
         }
 
         this.nextD3D12FenceValue++;
+
+        _framesQueue.OnFrameEnded(frameParameters);
     }
 
-    private void UpdateRenderCompletionTasks()
+
+    private void OnFrameRequested(object _, object _2)
     {
-        if (pendingPostRenderAction.TryDequeue(out var action) && action is not null)
-        {
-            action.Invoke();
-        }
-
-        foreach (var (tsc, framesLeft) in renderCompletionTasks.ToArray())
-        {
-            if (framesLeft == 1)
-            {
-                renderCompletionTasks.TryRemove(tsc, out _);
-                tsc.SetResult(this);
-            }
-            else
-            {
-                renderCompletionTasks.TryUpdate(tsc, framesLeft - 1, framesLeft);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Asks the panel to draw a single frame
-    /// </summary>
-    public Task<ComputeShaderPanel> RequestFrame(object parameter, Action? preRenderAction = null, Action? postRenderAction = null) =>
-        RequestFrames(new object[] { parameter }, preRenderAction, postRenderAction);
-
-    /// <summary>
-    /// Asks the panel to draw N frames
-    /// </summary>
-    public Task<ComputeShaderPanel> RequestFrames(object[] frameParameters, Action? preRenderAction = null, Action? postRenderAction = null)
-    {
-        var taskCompletionSource = new TaskCompletionSource<ComputeShaderPanel>();
-
-        foreach (var frameParameter in frameParameters)
-        {
-            pendingFrameParameters.Enqueue(frameParameter);
-            pendingPreRenderAction.Enqueue(preRenderAction);
-            pendingPostRenderAction.Enqueue(postRenderAction);
-        }
-
-        renderCompletionTasks.TryAdd(taskCompletionSource, pendingFrameParameters.Count);
-
         if (this.renderThread is null)
         {
             OnStartRenderLoop();
         }
-
-        return taskCompletionSource.Task;
     }
 
     /// <summary>
@@ -530,10 +590,10 @@ public sealed partial class ComputeShaderPanel
 
             // Start the initial frame separately, before the timer starts. This ensures that
             // resuming after a pause correctly renders the first frame at the right time.
-            @this.OnUpdate(renderStopwatch.Elapsed);
-            @this.OnPresent();
-
-            @this.UpdateRenderCompletionTasks();
+            if (@this.OnUpdate(renderStopwatch.Elapsed, out var firstFrameParameters))
+            {
+                @this.OnPresent(firstFrameParameters);
+            }
 
             renderStopwatch.Start();
 
@@ -542,11 +602,10 @@ public sealed partial class ComputeShaderPanel
             // Main render loop, until cancellation is requested
             while (!@this.isCancellationRequested)
             {
-                if (@this.pendingFrameParameters.IsEmpty)
+                if (@this._framesQueue.IsEmpty)
                 {
                     break;
                 }
-                System.Diagnostics.Debug.WriteLine($"{@this.pendingFrameParameters.Count} frames left");
 
                 // Update the resolution mode, if needed
                 if (isDynamicResolutionEnabled != @this.isDynamicResolutionEnabled)
@@ -579,10 +638,10 @@ public sealed partial class ComputeShaderPanel
 
                 frameStopwatch.Restart();
 
-                @this.OnUpdate(renderStopwatch.Elapsed);
-                @this.OnPresent();
-
-                @this.UpdateRenderCompletionTasks();
+                if (@this.OnUpdate(renderStopwatch.Elapsed, out var frameParameters))
+                {
+                    @this.OnPresent(frameParameters);
+                }
             }
 
             renderStopwatch.Stop();
@@ -675,14 +734,4 @@ public sealed partial class ComputeShaderPanel
 
         return true;
     }
-
-    /// <summary>
-    /// Encodes the current texture using the specified format
-    /// </summary>
-    public object? TryGetNextFrameParameters() => pendingFrameParameters.TryPeek(out var parameters) ? parameters : null;
-
-    /// <summary>
-    /// The number of scheduled frames left
-    /// </summary>
-    public int PendingFramesCount => pendingFrameParameters.Count;
 }
