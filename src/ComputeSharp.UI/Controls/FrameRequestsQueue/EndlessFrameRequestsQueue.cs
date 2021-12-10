@@ -15,67 +15,52 @@ namespace ComputeSharp.WinUI;
 /// <summary>
 /// Queues a certain number of parameterless frame requests
 /// </summary>
-public class EndlessFrameRequestsQueue : IFrameRequestsQueue
-//public class EndlessFrameRequestsQueue : FrameworkElement, IFrameRequestsQueue
+//public class EndlessFrameRequestsQueue : IFrameRequestsQueue
+public class EndlessFrameRequestsQueue : FrameworkElement, IFrameRequestsQueue
 {
-    ///// <summary>
-    ///// Gets or sets whether or not the rendering is paused.
-    ///// </summary>
-    //public bool IsPaused
-    //{
-    //    get => (bool)GetValue(IsPausedProperty);
-    //    set => SetValue(IsPausedProperty, value);
-    //}
-
-    ///// <summary>
-    ///// The <see cref="DependencyProperty"/> backing <see cref="IsPaused"/>.
-    ///// </summary>
-    //public static readonly DependencyProperty IsPausedProperty = DependencyProperty.Register(
-    //    nameof(IsPaused),
-    //    typeof(bool),
-    //    typeof(EndlessFrameRequestsQueue),
-    //    new PropertyMetadata(false, OnIsPausedPropertyChanged));
-
-    ///// <inheritdoc cref="DependencyPropertyChangedCallback"/>
-    //private static void OnIsPausedPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    //{
-    //    var @this = (EndlessFrameRequestsQueue)d;
-    //    var isPaused = (bool)e.NewValue;
-
-    //    if (!isPaused)
-    //    {
-    //        @this.FrameRequested?.Invoke(@this, EventArgs.Empty);
-    //    }
-    //}
-
-    private bool isPaused;
     /// <summary>
     /// Gets or sets whether or not the rendering is paused.
     /// </summary>
     public bool IsPaused
     {
-        get => isPaused;
-        set
+        get => (bool)GetValue(IsPausedProperty);
+        set => SetValue(IsPausedProperty, value);
+    }
+
+    /// <summary>
+    /// The <see cref="DependencyProperty"/> backing <see cref="IsPaused"/>.
+    /// </summary>
+    public static readonly DependencyProperty IsPausedProperty = DependencyProperty.Register(
+        nameof(IsPaused),
+        typeof(bool),
+        typeof(EndlessFrameRequestsQueue),
+        new PropertyMetadata(false, OnIsPausedPropertyChanged));
+
+    /// <inheritdoc cref="DependencyPropertyChangedCallback"/>
+    private static void OnIsPausedPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var @this = (EndlessFrameRequestsQueue)d;
+        @this.isPaused = (bool)e.NewValue;
+
+        if (!@this.isPaused)
         {
-            isPaused = value;
-            if (!value)
-            {
-                FrameRequested?.Invoke(this, EventArgs.Empty);
-            }
+            @this.FrameRequested?.Invoke(@this, EventArgs.Empty);
         }
     }
+
+    private bool isPaused;
 
     /// <inheritdoc/>
     public event EventHandler? FrameRequested;
 
     /// <inheritdoc/>
-    public bool IsEmpty => IsPaused;
+    public bool IsEmpty => isPaused;
 
     /// <inheritdoc/>
     public bool TryDequeue(out object? frameProperties)
     {
         frameProperties = null;
-        return !IsPaused;
+        return !isPaused;
     }
 
     /// <inheritdoc/>
