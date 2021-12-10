@@ -12,8 +12,12 @@
     <Compile Include="$(MSBuildThisFileDirectory)Controls\ComputeShaderPanel.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Controls\ComputeShaderPanel.Properties.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Controls\ComputeShaderPanel.Rendering.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Controls\FrameRequestsQueue\EndlessFrameRequestsQueue.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Controls\FrameRequestsQueue\FrameRequestsQueue.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Controls\FrameRequestsQueue\IFrameRequestsQueue.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\DynamicResolutionManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IShaderRunner.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ShaderRunner{T}.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ShaderRunner{T,TParameter}.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ParameterlessShaderRunner{T}.cs" />
   </ItemGroup>
 </Project>

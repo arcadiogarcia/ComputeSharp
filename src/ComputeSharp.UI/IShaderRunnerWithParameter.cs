@@ -9,7 +9,7 @@ namespace ComputeSharp.WinUI;
 /// <summary>
 /// An interface for a shader runner to be used with <see cref="ComputeShaderPanel"/>.
 /// </summary>
-public interface IShaderRunner
+public interface IShaderRunnerWithParameter
 {
     /// <summary>
     /// Renders a single frame to a texture.

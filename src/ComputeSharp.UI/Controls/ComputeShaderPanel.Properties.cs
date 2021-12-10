@@ -94,36 +94,39 @@ public sealed unsafe partial class ComputeShaderPanel
     }
 
     /// <summary>
-    /// Gets or sets whether or not the rendering is paused.
+    /// The queue that manages the pending frame requests for this panel
     /// </summary>
-    public bool IsPaused
+    public IFrameRequestsQueue FramesQueue
     {
-        get => (bool)GetValue(IsPausedProperty);
-        set => SetValue(IsPausedProperty, value);
+        get => (IFrameRequestsQueue)GetValue(FramesQueueProperty);
+        set => SetValue(FramesQueueProperty, value);
     }
 
     /// <summary>
-    /// The <see cref="DependencyProperty"/> backing <see cref="IsPaused"/>.
+    /// The <see cref="DependencyProperty"/> backing <see cref="FramesQueue"/>.
     /// </summary>
-    public static readonly DependencyProperty IsPausedProperty = DependencyProperty.Register(
-        nameof(IsPaused),
-        typeof(bool),
+    public static readonly DependencyProperty FramesQueueProperty = DependencyProperty.Register(
+        nameof(FramesQueue),
+        typeof(IFrameRequestsQueue),
         typeof(ComputeShaderPanel),
-        new PropertyMetadata(false, OnIsPausedPropertyChanged));
+        new PropertyMetadata(false, OnFramesQueuePropertyChanged));
 
     /// <inheritdoc cref="DependencyPropertyChangedCallback"/>
-    private static void OnIsPausedPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private static void OnFramesQueuePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var @this = (ComputeShaderPanel)d;
-        var isPaused = (bool)e.NewValue;
 
-        if (isPaused)
+        if (e.OldValue is IFrameRequestsQueue oldQueue)
         {
-            @this.OnStopRenderLoop();
+            oldQueue.FrameRequested -= @this.OnFrameRequested;
         }
-        else
+
+        if (e.NewValue is IFrameRequestsQueue newQueue)
         {
-            @this.OnStartRenderLoop();
+            newQueue.FrameRequested += @this.OnFrameRequested;
+            @this.framesQueue = newQueue;
         }
     }
+
+    private IFrameRequestsQueue framesQueue;
 }

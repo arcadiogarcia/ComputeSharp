@@ -23,7 +23,7 @@ public sealed class ContouredLayersRunner : IShaderRunner
     private ReadOnlyTexture2D<Rgba32, Float4>? texture;
 
     /// <inheritdoc/>
-    public void Execute(IReadWriteTexture2D<Float4> texture, TimeSpan timespan)
+    public void Execute(IReadWriteTexture2D<Float4> texture, TimeSpan timespan, object? _)
     {
         if (this.texture is null)
         {

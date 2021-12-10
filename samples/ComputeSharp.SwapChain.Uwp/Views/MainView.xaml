@@ -157,9 +157,12 @@
             x:Name="ShaderPanel"
             Grid.Row="1"
             IsDynamicResolutionEnabled="{x:Bind ViewModel.IsDynamicResolutionEnabled, Mode=OneWay}"
-            IsPaused="{x:Bind ViewModel.IsRenderingPaused, Mode=OneWay}"
             ResolutionScale="{x:Bind converters:ResolutionScaleConverter.ConvertPercentageToScale(ViewModel.SelectedResolutionScale), Mode=OneWay}"
-            ShaderRunner="{x:Bind ViewModel.SelectedComputeShader.ShaderRunner, Mode=OneWay}" />
+            ShaderRunner="{x:Bind ViewModel.SelectedComputeShader.ShaderRunner, Mode=OneWay}">
+            <computesharp:ComputeShaderPanel.FramesQueue>
+                <computesharp:EndlessFrameRequestsQueue IsPaused="{x:Bind ViewModel.IsRenderingPaused, Mode=OneWay}"/>
+            </computesharp:ComputeShaderPanel.FramesQueue>
+        </computesharp:ComputeShaderPanel>
 
         <!--  Settings panel  -->
         <StackPanel

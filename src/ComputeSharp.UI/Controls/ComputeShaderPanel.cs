@@ -25,6 +25,16 @@ public sealed unsafe partial class ComputeShaderPanel : SwapChainPanel
         this.Unloaded += ComputeShaderPanel_Unloaded;
         this.SizeChanged += ComputeShaderPanel_SizeChanged;
         this.CompositionScaleChanged += ComputeShaderPanel_CompositionScaleChanged;
+
+        this.width = (float)ActualWidth;
+        this.height = (float)ActualHeight;
+        this.compositionScaleX = CompositionScaleX;
+        this.compositionScaleY = CompositionScaleY;
+        this.resolutionScale = (float)ResolutionScale;
+        this.targetResolutionScale = 1.0f;
+        this.isDynamicResolutionEnabled = true;
+
+        framesQueue = new EndlessFrameRequestsQueue();
     }
 
     /// <summary>
@@ -38,14 +48,6 @@ public sealed unsafe partial class ComputeShaderPanel : SwapChainPanel
     // Initializes the swap chain and starts the render thread
     private void ComputeShaderPanel_Loaded(object sender, RoutedEventArgs e)
     {
-        this.width = (float)ActualWidth;
-        this.height = (float)ActualHeight;
-        this.compositionScaleX = CompositionScaleX;
-        this.compositionScaleY = CompositionScaleY;
-        this.resolutionScale = (float)ResolutionScale;
-        this.targetResolutionScale = 1.0f;
-        this.isDynamicResolutionEnabled = true;
-
         OnInitialize();
         OnStartRenderLoop();
     }

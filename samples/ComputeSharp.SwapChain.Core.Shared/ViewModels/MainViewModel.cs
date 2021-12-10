@@ -78,15 +78,15 @@ public sealed class MainViewModel : ObservableObject
     /// </summary>
     public IReadOnlyList<ComputeShader> ComputeShaderOptions { get; } = new ComputeShader[]
     {
-            new("Colorful infinity", new ShaderRunner<ColorfulInfinity>(static time => new((float)time.TotalSeconds))),
-            new("Extruded truchet", new ShaderRunner<ExtrudedTruchetPattern>(static time => new((float)time.TotalSeconds))),
-            new("Fractal tiling", new ShaderRunner<FractalTiling>(static time => new((float)time.TotalSeconds))),
-            new("Menger Journey", new ShaderRunner<MengerJourney>(static time => new((float)time.TotalSeconds))),
-            new("Octagrams", new ShaderRunner<Octagrams>(static time => new((float)time.TotalSeconds))),
-            new("Protean clouds", new ShaderRunner<ProteanClouds>(static time => new((float)time.TotalSeconds))),
-            new("Two tiled truchet", new ShaderRunner<TwoTiledTruchet>(static time => new((float)time.TotalSeconds))),
-            new("Pyramid pattern", new ShaderRunner<PyramidPattern>(static time => new((float)time.TotalSeconds))),
-            new("Triangle grid contouring", new ShaderRunner<TriangleGridContouring>(static time => new((float)time.TotalSeconds))),
+            new("Colorful infinity", new ParameterlessShaderRunner<ColorfulInfinity>(static time => new((float)time.TotalSeconds))),
+            new("Extruded truchet", new ParameterlessShaderRunner<ExtrudedTruchetPattern>(static time => new((float)time.TotalSeconds))),
+            new("Fractal tiling", new ParameterlessShaderRunner<FractalTiling>(static time => new((float)time.TotalSeconds))),
+            new("Menger Journey", new ParameterlessShaderRunner<MengerJourney>(static time => new((float)time.TotalSeconds))),
+            new("Octagrams", new ParameterlessShaderRunner<Octagrams>(static time => new((float)time.TotalSeconds))),
+            new("Protean clouds", new ParameterlessShaderRunner<ProteanClouds>(static time => new((float)time.TotalSeconds))),
+            new("Two tiled truchet", new ParameterlessShaderRunner<TwoTiledTruchet>(static time => new((float)time.TotalSeconds))),
+            new("Pyramid pattern", new ParameterlessShaderRunner<PyramidPattern>(static time => new((float)time.TotalSeconds))),
+            new("Triangle grid contouring", new ParameterlessShaderRunner<TriangleGridContouring>(static time => new((float)time.TotalSeconds))),
             new("Contoured layers", new ContouredLayersRunner())
     };
 

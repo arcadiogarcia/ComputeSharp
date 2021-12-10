@@ -99,7 +99,7 @@ public sealed partial class ComputeShaderPanel
     /// <summary>
     /// The <see cref="ReadWriteTexture2D{T, TPixel}"/> instance used to prepare frames to display.
     /// </summary>
-    private ReadWriteTexture2D<Rgba32, Float4>? texture;
+    public ReadWriteTexture2D<Rgba32, Float4>? Texture { get; private set; }
 
     /// <summary>
     /// Whether or not the window has been resized and requires the buffers to be updated.
@@ -337,12 +337,12 @@ public sealed partial class ComputeShaderPanel
         // Get the index of the initial back buffer
         this.currentBufferIndex = this.dxgiSwapChain3.Get()->GetCurrentBackBufferIndex();
 
-        this.texture?.Dispose();
+        this.Texture?.Dispose();
 
         D3D12_RESOURCE_DESC d3D12Resource0Description = this.d3D12Resource0.Get()->GetDesc();
 
         // Create the 2D texture to use to generate frames to display
-        this.texture = GraphicsDevice.Default.AllocateReadWriteTexture2D<Rgba32, Float4>(
+        this.Texture = GraphicsDevice.Default.AllocateReadWriteTexture2D<Rgba32, Float4>(
             (int)d3D12Resource0Description.Width,
             (int)d3D12Resource0Description.Height);
     }
@@ -351,8 +351,11 @@ public sealed partial class ComputeShaderPanel
     /// Updates the render resolution, if needed, and renders a new frame.
     /// </summary>
     /// <param name="time">The current time since the start of the application.</param>
-    private unsafe void OnUpdate(TimeSpan time)
+    /// <param name="frameParameters">The parameters used to render the frame.</param>
+    private unsafe bool OnUpdate(TimeSpan time, out object? frameParameters)
     {
+        frameParameters = null;
+
         if (this.isResizePending)
         {
             ApplyResize();
@@ -363,24 +366,35 @@ public sealed partial class ComputeShaderPanel
         // Skip if no factory is available
         if (this.shaderRunner is null)
         {
-            return;
+            return false;
+        }
+
+        //Skip if no parameters object left in the queue
+        if (!framesQueue.TryDequeue(out frameParameters))
+        {
+            return false;
         }
 
         // Generate the new frame
-        this.shaderRunner.Execute(this.texture!, time);
+        if(this.shaderRunner is IShaderRunner runner)
+        {
+            runner.Execute(this.Texture!, time, frameParameters);
+        }
+
+        return true;
     }
 
     /// <summary>
     /// Presents the last rendered frame for the current application.
     /// </summary>
-    private unsafe void OnPresent()
+    private unsafe void OnPresent(object? frameParameters)
     {
         _ = Win32.WaitForSingleObjectEx(frameLatencyWaitableObject, 1000, 1);
 
         using ComPtr<ID3D12Resource> d3D12Resource = default;
 
         // Get the underlying ID3D12Resource pointer for the texture
-        InteropServices.TryGetID3D12Resource(this.texture!, Win32.__uuidof<ID3D12Resource>(), (void**)d3D12Resource.GetAddressOf()).Assert();
+        InteropServices.TryGetID3D12Resource(this.Texture!, Win32.__uuidof<ID3D12Resource>(), (void**)d3D12Resource.GetAddressOf()).Assert();
 
         // Get the target back buffer to update
         ID3D12Resource* d3D12ResourceBackBuffer = this.currentBufferIndex switch
@@ -442,6 +456,8 @@ public sealed partial class ComputeShaderPanel
         }
 
         this.nextD3D12FenceValue++;
+
+        framesQueue.OnFrameEnded(frameParameters);
     }
 
     /// <summary>
@@ -462,8 +478,10 @@ public sealed partial class ComputeShaderPanel
 
             // Start the initial frame separately, before the timer starts. This ensures that
             // resuming after a pause correctly renders the first frame at the right time.
-            @this.OnUpdate(renderStopwatch.Elapsed);
-            @this.OnPresent();
+            if (@this.OnUpdate(renderStopwatch.Elapsed, out var firstFrameParameters))
+            {
+                @this.OnPresent(firstFrameParameters);
+            }
 
             renderStopwatch.Start();
 
@@ -472,6 +490,11 @@ public sealed partial class ComputeShaderPanel
             // Main render loop, until cancellation is requested
             while (!@this.isCancellationRequested)
             {
+                if (@this.framesQueue.IsEmpty)
+                {
+                    break;
+                }
+
                 // Update the resolution mode, if needed
                 if (isDynamicResolutionEnabled != @this.isDynamicResolutionEnabled)
                 {
@@ -500,11 +523,14 @@ public sealed partial class ComputeShaderPanel
 
                 frameStopwatch.Restart();
 
-                @this.OnUpdate(renderStopwatch.Elapsed);
-                @this.OnPresent();
+                if (@this.OnUpdate(renderStopwatch.Elapsed, out var frameParameters))
+                {
+                    @this.OnPresent(frameParameters);
+                }
             }
 
             renderStopwatch.Stop();
+            @this.renderThread = null;
         }
 
         this.isCancellationRequested = false;
@@ -518,6 +544,14 @@ public sealed partial class ComputeShaderPanel
     private void OnStopRenderLoop()
     {
         this.isCancellationRequested = true;
+    }
+
+    private void OnFrameRequested(object? _, object _2)
+    {
+        if (this.isInitialized && this.renderThread is null)
+        {
+            OnStartRenderLoop();
+        }
     }
 
     /// <summary>
@@ -541,6 +575,6 @@ public sealed partial class ComputeShaderPanel
         this.dxgiSwapChain3.Dispose();
         this.d3D12Resource0.Dispose();
         this.d3D12Resource1.Dispose();
-        this.texture?.Dispose();
+        this.Texture?.Dispose();
     }
 }
