@@ -1,0 +1,13 @@
+﻿dcomp.*
+IPresentationFactory
+
+d3d11.*
+D3D11_SDK_VERSION
+
+ICompositorInterop
+IDXGIResource1
+
+GENERIC_ALL
+
+WaitForMultipleObjects
+QueryInterruptTimePrecise

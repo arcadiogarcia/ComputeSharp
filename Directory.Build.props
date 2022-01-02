@@ -11,7 +11,7 @@
 
   <PropertyGroup>
     <AssemblyVersion>2.0.0.0</AssemblyVersion>
-    <PackageVersion>2.0.0</PackageVersion>
+    <PackageVersion>2.0.0-localfork.26</PackageVersion>
     <RepositoryUrl>https://github.com/Sergio0694/ComputeSharp/</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>

@@ -109,7 +109,7 @@ public sealed unsafe partial class ComputeShaderPanel
         nameof(FramesQueue),
         typeof(IFrameRequestsQueue),
         typeof(ComputeShaderPanel),
-        new PropertyMetadata(false, OnFramesQueuePropertyChanged));
+        new PropertyMetadata(null, OnFramesQueuePropertyChanged));
 
     /// <inheritdoc cref="DependencyPropertyChangedCallback"/>
     private static void OnFramesQueuePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
