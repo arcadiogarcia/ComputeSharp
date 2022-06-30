@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using CommunityToolkit.Diagnostics;
@@ -28,9 +29,9 @@ partial class DeviceHelper
     /// It also checks whether or not there are any error messages being logged that didn't result in an actual crash yet.
     /// </summary>
     /// <return>Whether or not there are any logged errors or warnings.</return>
-    public static unsafe bool FlushAllID3D12InfoQueueMessagesAndCheckForErrorsOrWarnings()
+    public static unsafe List<(Luid, D3D12_MESSAGE)> FlushAllID3D12InfoQueueMessagesAndCheckForErrorsOrWarnings()
     {
-        bool hasErrorsOrWarnings = false;
+        List<(Luid, D3D12_MESSAGE)> allMessages = new();
 
         lock (DevicesCache)
         {
@@ -54,6 +55,11 @@ partial class DeviceHelper
                     try
                     {
                         queue->GetMessage(i, message, &length);
+
+                        if (message->Severity is D3D12_MESSAGE_SEVERITY_ERROR or D3D12_MESSAGE_SEVERITY_CORRUPTION or D3D12_MESSAGE_SEVERITY_WARNING)
+                        {
+                            allMessages.Add((pair.Key, *message));
+                        }
 
                         builder.Clear();
                         builder.AppendLine($"[D3D12 message #{i} for \"{device}\" (HW: {device.IsHardwareAccelerated}, UMA: {device.IsCacheCoherentUMA})]");
@@ -166,11 +172,6 @@ partial class DeviceHelper
                         NativeMemory.Free(message);
                     }
 
-                    if (message->Severity is D3D12_MESSAGE_SEVERITY_ERROR or D3D12_MESSAGE_SEVERITY_CORRUPTION or D3D12_MESSAGE_SEVERITY_WARNING)
-                    {
-                        hasErrorsOrWarnings = true;
-                    }
-
                     Trace.WriteLine(builder);
                 }
 
@@ -178,6 +179,12 @@ partial class DeviceHelper
             }
         }
 
-        return hasErrorsOrWarnings;
+        return allMessages;
+    }
+
+    internal static bool TryHandleMessage(Luid luid, D3D12_MESSAGE message)
+    {
+        GraphicsDevice device = DevicesCache[luid];
+        return device.TryHandleInfoQueueMessage(message);
     }
 }

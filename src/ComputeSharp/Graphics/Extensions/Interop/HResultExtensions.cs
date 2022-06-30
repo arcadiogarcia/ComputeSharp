@@ -1,8 +1,10 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using CommunityToolkit.Diagnostics;
 using ComputeSharp.Graphics.Helpers;
+using TerraFX.Interop.DirectX;
 using TerraFX.Interop.Windows;
 
 namespace ComputeSharp.Core.Extensions;
@@ -48,14 +50,16 @@ internal static class HResultExtensions
             [MethodImpl(MethodImplOptions.NoInlining)]
             static void AssertWithDebugInfo(int result)
             {
-                bool hasErrorsOrWarnings = DeviceHelper.FlushAllID3D12InfoQueueMessagesAndCheckForErrorsOrWarnings();
+                var errorsOrWarnings = DeviceHelper.FlushAllID3D12InfoQueueMessagesAndCheckForErrorsOrWarnings();
 
                 if (result < 0)
                 {
                     ThrowHelper.ThrowWin32Exception(result);
                 }
 
-                if (hasErrorsOrWarnings)
+                var unhandledMessages = errorsOrWarnings.Where(x => !DeviceHelper.TryHandleMessage(x.Item1, x.Item2)).ToArray();
+
+                if (unhandledMessages.Length > 0)
                 {
                     ThrowHelper.ThrowWin32Exception("Warning or error detected by ID3D12InfoQueue.");
                 }

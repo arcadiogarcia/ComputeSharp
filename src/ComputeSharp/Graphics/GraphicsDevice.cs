@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using CommunityToolkit.Diagnostics;
 using ComputeSharp.Graphics.Commands.Interop;
@@ -369,5 +371,49 @@ public sealed unsafe partial class GraphicsDevice : NativeObject
     public override string ToString()
     {
         return $"[{Luid}] {Name}";
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public class InfoQueueMessageEventArgs : HandledEventArgs 
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        public uint Category { get; init; }
+        /// <summary>
+        /// 
+        /// </summary>
+        public uint Severity { get; init; }
+        /// <summary>
+        /// 
+        /// </summary>
+        public uint ID { get; init; }
+
+        internal InfoQueueMessageEventArgs(D3D12_MESSAGE message)
+        {
+            Category = (uint)message.Category;
+            Severity = (uint)message.Severity;
+            ID = (uint)message.ID;
+        }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="foo"></param>
+    public delegate void InfoQueueEventHandler(InfoQueueMessageEventArgs foo);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public event InfoQueueEventHandler? OnInfoQueueMessage;
+
+    internal bool TryHandleInfoQueueMessage(D3D12_MESSAGE message)
+    {
+        var args = new InfoQueueMessageEventArgs(message);
+        OnInfoQueueMessage?.Invoke(args);
+        return args.Handled;
     }
 }
